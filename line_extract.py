@@ -37,7 +37,7 @@ class Node(Coordinate):
     def add_neighbor(self, coord):
         if coord.id in self.neighbors:
             print("INFO: %s has been connected to %s" % (coord, self))
-        self.neighbors[coord.id] = self.distance_from_node(coord.x, coord.y)
+        self.neighbors[coord.id] = self.distance_from_node_with_trick(coord.x, coord.y)
 
     def get_clostest_node(self):
         return self.neighbors[0] #return the closest node id
@@ -61,6 +61,16 @@ class Node(Coordinate):
         # tmp = np.power(self.x - x, 2) + np.power(self.y - y, 2)
         return result
 
+    def distance_from_node_with_trick(self, x, y):
+        result = np.abs(self.y-y) + np.abs(self.x-x) # simple try!
+
+        if self.y == y: # 垂直惩罚
+            result += THRESHOLD
+        if self.y > y: # 不鼓励往前搜索
+            result += THRESHOLD
+        # tmp = np.power(self.x - x, 2) + np.power(self.y - y, 2)
+        return result
+
 class Edge():
     """
     边数据结构
@@ -68,7 +78,7 @@ class Edge():
     def __init__(self, coord1: Node, coord2: Node, id=0):
         self.start_node = coord1
         self.end_node = coord2
-        self.weight = self.start_node.distance_from_node(self.end_node.x, self.end_node.y)
+        self.weight = self.start_node.distance_from_node_with_trick(self.end_node.x, self.end_node.y)
         self.id = id
 
 
@@ -123,7 +133,7 @@ class Data:
         self.coordinates = [] # 最后保留的线的坐标
         self.xs = []
         self.ys = []
-        self.id2coord = {}
+        self.id2coord = {} # id: (x, y)
         self.start_id = 0
         self.length = 0
 
@@ -195,10 +205,17 @@ class PathSearch():
         self.get_init_points()
 
         # 开始搜索
-        self.search()
+        path = self.search()
+
+
 
         # 整理搜索结果
-        pass
+
+        for key in path.id2coord.keys():
+            path.xs.append(path.id2coord[key][0])
+            path.ys.append(path.id2coord[key][1])
+
+        return path
 
     def build_graph(self) -> Graph:
         """
@@ -231,20 +248,23 @@ class PathSearch():
         :return:
         """
         print("**SEARCH: the size of start_points: %s**" % len(self.start_points))
-        result_paths = {}
+        result_paths = []
 
         for start_point in tqdm(self.start_points): # 对于每个待选起点都执行一次搜索
             path = self.search_from_one_point(start_point)
-            result_paths[path] = path.length
+            result_paths.append(path)
 
         # 返回长度最长的一条路径
-        pass
+        result_paths = sorted(result_paths, key=lambda t: t.length, reverse=False)
+        return result_paths[0]
 
     def search_from_one_point(self, start_point: Node)-> Data:
         """
         从单个起始点开始搜索
         1. 找到离当前点current_p最近的点clostest_p，加入路径中，将当前点设置为clostest_p
-        2. 搜索结束的条件：找到图中位于最右边的节点或者下一个最近的节点超过某个阈值（突变）为止
+        2. 搜索结束的条件：找到图中位于最右边的节点或者下一个最近的节点超过某个阈值（突变）为止。
+
+        惩罚考虑：同一垂直线的点距离很大；不鼓励"往前"搜索；访问过的不要再考虑
         :param start_point:
         :return:
         """
@@ -257,6 +277,7 @@ class PathSearch():
             clostest_node = self.graph.id2node[current_node.get_clostest_node()[0]]
             distance = current_node.get_clostest_node()[1]
             if distance > 100: # 判定为"突变"的阈值
+                print("前后两点距离超过阈值100, 突变啦！")
                 break
             else:
                 path.add_coord(clostest_node.x, clostest_node.y)
@@ -301,10 +322,10 @@ class LineExtract():
         helper.build_graph()
 
         # 执行最短路径算法
-        helper.run()
+        return helper.run()
 
         # 返回结果(处理成Data结构，方便最后通过restore_from_corrdinate方法出图)
-        return helper.get_result()
+        # return helper.get_result()
 
 
     def extract_corrdinate(self, image) -> Data:
@@ -348,8 +369,8 @@ class LineExtract():
 
 
 if __name__ == '__main__':
-    # test_image_path = "/Users/zhuge/CSUClass/GIS/外包山脊线检测/高层图数据/ridge_fine/train/label/ex_8.png"
-    test_image_path = "/Users/zhuge/CSUClass/GIS/外包山脊线检测/高层图数据/ridge_fine/train/label/ex_28.png"
+    test_image_path = "/Users/zhuge/CSUClass/GIS/外包山脊线检测/高层图数据/ridge_fine/train/label/ex_494.png"#ex_494.png;ex_8.png
+    # test_image_path = "/Users/zhuge/CSUClass/GIS/外包山脊线检测/高层图数据/ridge_fine/train/label/ex_28.png"
     import os
     # os.path.basename(test_image_path)
 
@@ -362,5 +383,7 @@ if __name__ == '__main__':
     shorest_path = instance.find_shortest_path()
 
     # 恢复原图
-    restore_res = instance.restore_from_corrdinate(res, os.path.basename(test_image_path))
+    # restore_res = instance.restore_from_corrdinate(res, os.path.basename(test_image_path))
+    restore_res = instance.restore_from_corrdinate(shorest_path, "test_"+os.path.basename(test_image_path))
+
 
