@@ -369,10 +369,12 @@ class LineExtract():
 
 
 if __name__ == '__main__':
-    test_image_path = "/Users/zhuge/CSUClass/GIS/外包山脊线检测/高层图数据/ridge_fine/train/label/ex_494.png"#ex_494.png;ex_8.png
+    # test_image_path = "/Users/zhuge/CSUClass/GIS/外包山脊线检测/高层图数据/ridge_fine/train/label/newgp3k_269.png"#ex_494.png;ex_8.png;newgp3k_269;probality_new31.png
     # test_image_path = "/Users/zhuge/CSUClass/GIS/外包山脊线检测/高层图数据/ridge_fine/train/label/ex_28.png"
+    test_image_path = "probality_new31.png"
     import os
     # os.path.basename(test_image_path)
+
 
     instance = LineExtract()
 
